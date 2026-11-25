@@ -50,6 +50,24 @@ On its own, an Orca bot only acts when you write to it. An automation is an Orca
 
 `tko automations` creates all three with the exact settings (schedule, absolute paths, prechecks). They are created **disabled**: you try one ticket first, then turn them on.
 
+### How pull requests are opened
+
+The kit has no built-in way to open pull requests. At a project's **first ticket** the bot reads the repository's own rules (AGENTS.md, CLAUDE.md, CONTRIBUTING.md, pull request templates, workflows, skills, Cursor rules), summarises them in its chat with the files they come from, and asks you:
+
+- **"method ok &lt;project&gt;"**: saved as is.
+- **Tell it what to change**: saved with your change, and it lists where that departs from the repository's rules.
+- No rules found: it proposes a plain draft pull request.
+
+The method also holds the **labels that block completion**. From then on every agent follows it without asking.
+
+**When the rules change,** a script notices that one of those files changed or appeared on the base branch. It runs at every kickoff, before every push, before opening the PR and before completing a ticket. Only then does the bot read the difference. If it concerns pull requests it tells you and asks; meanwhile the coding goes on, and only pushing, opening and completing wait.
+
+- A draft is always a draft: a method cannot make the bot merge, approve, mark ready or force-push.
+- Rules are read from the base branch on the remote, so a ticket's own branch cannot change them.
+- It cannot see rules that exist only in GitHub's settings (branch protection, apps) or in other files, and whether a change concerns pull requests is the bot's judgement.
+
+It is saved in `~/.config/ticket-orchestrator/pr-methods/<project>.md`. You can edit it; delete it to be asked again.
+
 ## Requirements
 
 - macOS (Linux should work, not tested)
@@ -136,6 +154,7 @@ tko automations
 | `ok KEY` / `ok KEY + changes` | On a ticket card | Starts it, with your changes to the plan |
 | `no KEY` | On a ticket card | Rejected; nothing is touched |
 | `fix KEY` / `fix KEY 1,3` / `skip KEY` | On a review proposal | Applies all / some fixes, or leaves them |
+| `method ok PROJECT` / `method keep PROJECT` / a change in your own words | On a pull request method proposal | Saves the new method / keeps the current one / saves your variation |
 | `complete KEY` | A reviewer never reported | Completes anyway (never overrides failing checks, conflicts or blocking labels) |
 | `take KEY` | Any time | Hands it a ticket it did not pick up (e.g. a `baseline` one) |
 
@@ -187,6 +206,7 @@ Add one profile per project. The bot picks the profile from the ticket key's pro
 - **Start with `tko doctor`.**
 - **A check never wakes the bot:** in Orca, the automation's run history shows `skipped_precheck` when there was nothing to do. Run the same check yourself, e.g. `tko pending prs`, to see what it sees.
 - **Errors from Jira or GitHub** during the checks are written to `~/.config/ticket-orchestrator/errors.log`. One failing ticket or PR does not stop the others.
+- **An agent finished but did not push:** it is probably waiting for the pull request method. `tko pr-method check KEY` says why; look for the bot's question in its chat.
 - **A reviewer never reports:** after `pr.reviewerTimeoutMinutes` (default 30) from the end of CI, the bot tells you which reviewer is missing; answer `complete KEY` to go on.
 
 ## Profile reference
@@ -207,7 +227,6 @@ See [`profiles/example.json`](profiles/example.json).
 | `setup.copyFromMain`, `setup.commands` | Files copied into new workspaces, commands run there |
 | `pr.reviewers` | Reviewers that count: `login` (review author) and/or `checkName` (check run) |
 | `pr.reviewerTimeoutMinutes` | How long after CI to wait for a reviewer that may never run (default 30) |
-| `pr.blockingLabels`, `pr.blockingLabelHint` | Labels that make a PR not mergeable, and what the bot tells you to do |
 | `agents.default`, `.model`, `.effort` | Default coding agent and model |
 | `workerRules` | Extra rules for the coding agents (checks to run, docs to follow) |
 

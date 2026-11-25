@@ -13,13 +13,15 @@ description: Decide whether a ticket's pull request is mergeable by the profile'
 
 ## Mergeable?
 
+First `tko pr-method check <KEY> --json`: if it is not `current`, follow `pr-method` and come back when my owner has decided. The blocking labels may be out of date until then.
+
 `gh pr view <n> -R <repo.github> --json state,isDraft,mergeable,labels,statusCheckRollup,reviews,headRefOid,url`
 
 All must hold:
 1. open, and not a draft;
 2. every check finished and passed (skipped and neutral are fine);
 3. `mergeable` is `MERGEABLE`. `CONFLICTING` blocks. `UNKNOWN` means GitHub has not computed it yet: do not complete and do not message my owner; the pull-request check wakes me again as soon as it changes.
-4. none of the profile's `pr.blockingLabels`;
+4. none of the labels under "Labels that block completion" in `tko pr-method show <KEY>`;
 5. every reviewer in `pr.reviewers` reported on the head commit, with no open findings (from `review-triage`, or skipped by my owner). A reviewer that did not report within the timeout (`reviewersMissing`) does not count as approval: tell my owner which reviewer is missing and complete only if they reply "complete <KEY>".
 
 **All true** →
@@ -30,6 +32,6 @@ All must hold:
 
 **"complete <KEY>" from my owner** → they accept what is missing (for example a reviewer that never ran): run the Jira step above and complete. It never overrides failing checks, conflicts or blocking labels.
 
-**Something missing** → tell my owner once what blocks it, specifically (e.g. the blocking label and the profile's `blockingLabelHint`, a conflict to resolve, a check still failing). The status stays `pr_ready`. When the blocker goes away the pull-request check sees a new state and brings me back.
+**Something missing** → tell my owner once what blocks it, specifically (e.g. the blocking label and what the method says removes it, a conflict to resolve, a check still failing). The status stays `pr_ready`. When the blocker goes away the pull-request check sees a new state and brings me back.
 
 Always finish with `tko ack <KEY> <signature>` when I came from a pull-request event.

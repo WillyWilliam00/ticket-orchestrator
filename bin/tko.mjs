@@ -7,6 +7,8 @@ import { resolve } from 'node:path';
 import { mainCheckout, setupWorktree } from '../lib/setup-worktree.mjs';
 import { defaultBot, syncAutomations, syncBot } from '../lib/orca-setup.mjs';
 import { doctor, printDoctor } from '../lib/doctor.mjs';
+import { checkMethod, markSeen, methodDiff, readMethod, saveMethod } from '../lib/pr-method.mjs';
+import { readFileSync } from 'node:fs';
 
 const HELP = `tko — Ticket Orchestrator state and checks
 
@@ -23,6 +25,13 @@ Checks (used by the automations)
   tko pending assignments|prs|guard [--json]
   tko precheck assignments|prs|guard    exit 0 when there is work, 1 when there is none
   tko seed                         record already-assigned tickets as baseline
+
+Pull request method (how PRs are opened in a project)
+  tko pr-method check <KEY|profile> [--json]     exit 0 = approved and current, 1 = none or rules changed
+  tko pr-method show <KEY|profile>               print the approved method
+  tko pr-method diff <KEY|profile> --commit sha  what changed in the repository's rules
+  tko pr-method save <KEY|profile> --commit sha --file f    save what the owner approved
+  tko pr-method seen <KEY|profile> --commit sha  the change does not concern pull requests
 
 Setup
   tko doctor [--fix]               check everything the bot needs; --fix restores its soul and skills
@@ -46,6 +55,8 @@ function parse(argv) {
   }
   return { pos, flags };
 }
+
+const profileFor = (ps, id) => (/-\d+$/.test(id ?? '') ? profileForKey(ps, id) : profileById(ps, id));
 
 function table(rows, cols) {
   if (!rows.length) return console.log('(none)');
@@ -145,9 +156,31 @@ function main() {
     case 'profiles':
       return table(profiles().map((p) => ({ id: p.id, project: p.jira.projectKey, repo: p.repo.github, path: p.repo.path })), ['id', 'project', 'repo', 'path']);
     case 'profile': {
-      const ps = profiles();
-      const p = /-\d+$/.test(pos[0] ?? '') ? profileForKey(ps, pos[0]) : profileById(ps, pos[0]);
-      return console.log(JSON.stringify(p, null, 2));
+      return console.log(JSON.stringify(profileFor(profiles(), pos[0]), null, 2));
+    }
+    case 'pr-method': {
+      const p = profileFor(profiles(), pos[1]);
+      if (['diff', 'save', 'seen'].includes(pos[0]) && typeof flags.commit !== 'string') throw new Error(`usage: tko pr-method ${pos[0]} <KEY|profile> --commit <sha from check>`);
+      switch (pos[0]) {
+        case 'check': {
+          const r = checkMethod(db, p);
+          process.exitCode = r.status === 'current' ? 0 : 1;
+          return out(flags.json, r, () => console.log(`${r.profile}: ${r.status}${r.changes?.length ? ` (${r.changes.map((c) => `${c.change} ${c.path}`).join(', ')})` : ''}`));
+        }
+        case 'show':
+          return console.log(readMethod(db, p));
+        case 'diff':
+          return console.log(methodDiff(db, p, flags.commit));
+        case 'save':
+          if (typeof flags.file !== 'string') throw new Error('usage: tko pr-method save <KEY|profile> --commit <sha> --file <path>');
+          saveMethod(db, p, flags.commit, readFileSync(flags.file, 'utf8'));
+          return console.log(`saved the pull request method of ${p.id}`);
+        case 'seen':
+          markSeen(db, p, flags.commit);
+          return console.log(`${p.id}: reference moved forward`);
+        default:
+          throw new Error('usage: tko pr-method check|show|diff|save|seen <KEY|profile>');
+      }
     }
     case 'setup-worktree': {
       const ps = profiles();
