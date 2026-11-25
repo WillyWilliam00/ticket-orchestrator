@@ -70,6 +70,7 @@ See [`profiles/example.json`](profiles/example.json). Fields:
 | `git.branchFormat`, `git.commitFormat`, `git.types` | Naming rules |
 | `setup.copyFromMain`, `setup.commands` | Files copied into new worktrees, commands run there |
 | `pr.reviewers` | Reviewers that count: `login` (review author) and/or `checkName` (check run) |
+| `pr.reviewerTimeoutMinutes` | How long after CI finishes to wait for a reviewer that may never run (default 30) |
 | `pr.blockingLabels`, `pr.blockingLabelHint` | Labels that make a PR not mergeable, and what to tell you |
 | `agents` | Default coding agent, model and effort |
 | `workerRules` | Extra rules for the coding agents |

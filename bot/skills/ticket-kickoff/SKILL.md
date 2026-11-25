@@ -20,6 +20,8 @@ description: My owner answered a ticket card ("ok KEY", "ok KEY + changes", "no 
 
 ## 3. Workspace
 
+A ticket that came back after a reassignment may already have them: if `tko get` shows workspaces, a branch or a PR, reuse them (check the worktree still exists with `orca worktree list --json`) and start the agents there with the new instructions, instead of creating new ones.
+
 Profile: `tko profile <KEY>`.
 
 ```

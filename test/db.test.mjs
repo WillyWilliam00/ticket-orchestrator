@@ -37,13 +37,34 @@ test('status changes follow the allowed transitions', () => {
   assert.deepEqual(getEvents(db, 'ABC-3').map((e) => e.to_status), ['proposed', 'approved', 'working', 'completed']);
 });
 
-test('a stopped ticket assigned again is proposed again', () => {
+test('only a ticket stopped by a reassignment is proposed again', () => {
   const db = fresh();
   claim(db, { key: 'ABC-4', profile: 'p', source: 'mail' });
   assert.equal(reclaim(db, 'ABC-4', 'poll'), false);
-  setTicket(db, 'ABC-4', { status: 'stopped' });
+  setTicket(db, 'ABC-4', { status: 'stopped', stopReason: 'reassigned' });
+  assert.equal(getTicket(db, 'ABC-4').stop_reason, 'reassigned');
   assert.equal(reclaim(db, 'ABC-4', 'poll'), true);
-  assert.equal(getTicket(db, 'ABC-4').status, 'proposed');
+  const t = getTicket(db, 'ABC-4');
+  assert.equal(t.status, 'proposed');
+  assert.equal(t.stop_reason, null);
+
+  claim(db, { key: 'ABC-7', profile: 'p', source: 'mail' });
+  setTicket(db, 'ABC-7', { status: 'stopped', stopReason: 'pr_closed' });
+  assert.equal(reclaim(db, 'ABC-7', 'poll'), false);
+  assert.throws(() => setTicket(db, 'ABC-5x', { status: 'stopped' }), /not tracked/);
+});
+
+test('a database from before stop_reason and dispatches is migrated', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const path = join(mkdtempSync(join(tmpdir(), 'tko-')), 'state.db');
+  const old = new DatabaseSync(path);
+  old.exec(`CREATE TABLE tickets (key TEXT PRIMARY KEY, profile TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', title_en TEXT, url TEXT,
+    status TEXT NOT NULL, source TEXT NOT NULL, branch TEXT, workspaces TEXT NOT NULL DEFAULT '[]', pr_number INTEGER, head_sha TEXT,
+    pr_ack TEXT, note TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`);
+  old.close();
+  const db = openDb(path);
+  claim(db, { key: 'ABC-8', profile: 'p', source: 'mail' });
+  assert.deepEqual(getTicket(db, 'ABC-8').dispatches, []);
 });
 
 test('clear closed keeps active tickets', () => {

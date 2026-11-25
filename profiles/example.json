@@ -35,6 +35,7 @@
       { "name": "Review bot", "login": "acme-review-bot" },
       { "name": "Checker", "login": "checker", "checkName": "Checker: PR review" }
     ],
+    "reviewerTimeoutMinutes": 30,
     "blockingLabels": ["needs-audit"],
     "blockingLabelHint": "Run the audit locally; it removes the label when it passes."
   },

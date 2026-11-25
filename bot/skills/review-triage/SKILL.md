@@ -5,7 +5,7 @@ description: Every configured reviewer has reported on the head commit of a tick
 
 # Review triage
 
-Input: an entry from `tko pending prs --json` with `reason: reviews_ready`. Only the reviewers in the profile's `pr.reviewers` count; ignore every other bot or app.
+Input: an entry from `tko pending prs --json` with `reason: reviews_ready`. When `reviewersMissing` is not empty, some reviewers did not report within the profile's timeout: triage what the others said, and mention the missing ones. Only the reviewers in the profile's `pr.reviewers` count; ignore every other bot or app.
 
 ## 1. Collect the findings on the head commit
 

@@ -13,7 +13,7 @@ Tickets
   tko list [--status s1,s2] [--profile id] [--json]
   tko get <KEY> [--json]
   tko claim <KEY> --source mail|poll|manual [--title t] [--url u]   exit 0 = taken, 1 = already tracked
-  tko set <KEY> [--status s] [--title-en t] [--branch b] [--pr n] [--workspace w] [--dispatch id] [--note n] [--detail d] [--force]
+  tko set <KEY> [--status s] [--title-en t] [--branch b] [--pr n] [--workspace w] [--dispatch id] [--reason reassigned|pr_closed|owner] [--note n] [--detail d] [--force]
   tko ack <KEY> <signature>        mark a pull request event as handled
   tko remove <KEY> [--force]       --force is needed for an active ticket
   tko clear --closed | --all --yes
@@ -28,10 +28,10 @@ Setup
   tko profile <id|KEY>             print one profile
   tko setup-worktree [--profile id] [path]
   tko bot-sync [--bot name]
-  tko automations [--bot name] [--dry-run]
+  tko automations [--bot name] [--dry-run] [--replace]
   tko serve [--port 4747]          local HTML report
 
-Statuses: baseline proposed approved rejected working pr_draft pr_ready completed stopped`;
+Statuses: baseline proposed approved rejected working pr_draft pr_ready completed stopped\nA stopped ticket comes back as proposed only when it was stopped by a reassignment.`;
 
 function parse(argv) {
   const pos = [];
@@ -100,6 +100,7 @@ function main() {
           pr: flags.pr === undefined ? undefined : Number(flags.pr),
           workspace: flags.workspace,
           dispatch: flags.dispatch,
+          stopReason: flags.reason,
           note: flags.note,
           url: flags.url,
         },
@@ -157,7 +158,7 @@ function main() {
     case 'bot-sync':
       return syncBot(flags.bot || defaultBot);
     case 'automations':
-      return syncAutomations(profiles(), { bot: flags.bot || defaultBot, tko: process.env.TKO_SELF || 'tko', dryRun: Boolean(flags['dry-run']) });
+      return syncAutomations(profiles(), { bot: flags.bot || defaultBot, tko: process.env.TKO_SELF || 'tko', dryRun: Boolean(flags['dry-run']), replace: Boolean(flags.replace) });
     case 'serve': {
       return import('../lib/server.mjs').then(({ serve }) => serve(db, profiles(), Number(flags.port || 4747)));
     }

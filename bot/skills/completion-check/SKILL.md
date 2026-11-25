@@ -8,7 +8,7 @@ description: Decide whether a ticket's pull request is mergeable by the profile'
 ## Merged or closed (reason pr_merged / pr_closed)
 
 - **merged**: if the ticket is not `completed`, run the Jira complete transition (below) and `tko set <KEY> --status completed --force --detail "PR merged"`. Tell my owner.
-- **closed without merge**: `tko set <KEY> --status stopped --note "PR closed without merge"`. Tell my owner; do nothing else.
+- **closed without merge**: `tko set <KEY> --status stopped --reason pr_closed --note "PR closed without merge"`. Tell my owner; do nothing else.
 - `tko ack <KEY> <signature>`.
 
 ## Mergeable?
@@ -18,15 +18,17 @@ description: Decide whether a ticket's pull request is mergeable by the profile'
 All must hold:
 1. open, and not a draft;
 2. every check finished and passed (skipped and neutral are fine);
-3. `mergeable` is not `CONFLICTING` (if `UNKNOWN`, treat as not yet known: say so, do not complete);
+3. `mergeable` is `MERGEABLE`. `CONFLICTING` blocks. `UNKNOWN` means GitHub has not computed it yet: do not complete and do not message my owner; the pull-request check wakes me again as soon as it changes.
 4. none of the profile's `pr.blockingLabels`;
-5. every reviewer in `pr.reviewers` reported on the head commit, with no open findings (from `review-triage`, or skipped by my owner).
+5. every reviewer in `pr.reviewers` reported on the head commit, with no open findings (from `review-triage`, or skipped by my owner). A reviewer that did not report within the timeout (`reviewersMissing`) does not count as approval: tell my owner which reviewer is missing and complete only if they reply "complete <KEY>".
 
 **All true** →
 - still assigned to my owner? (`orca jira issue <KEY> --json`) If not → `assignment-guard`;
 - `orca jira status set <KEY> --to "<jira.transitions.complete>"` (if unavailable, tell my owner and stop here);
 - `tko set <KEY> --status completed --detail "mergeable: Jira moved to <transition>"`;
 - tell my owner: "✅ <KEY> — PR #<n> is mergeable, Jira moved to <transition>." with the link.
+
+**"complete <KEY>" from my owner** → they accept what is missing (for example a reviewer that never ran): run the Jira step above and complete. It never overrides failing checks, conflicts or blocking labels.
 
 **Something missing** → tell my owner once what blocks it, specifically (e.g. the blocking label and the profile's `blockingLabelHint`, a conflict to resolve, a check still failing). The status stays `pr_ready`. When the blocker goes away the pull-request check sees a new state and brings me back.
 

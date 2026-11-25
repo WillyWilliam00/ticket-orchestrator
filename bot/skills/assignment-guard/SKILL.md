@@ -11,7 +11,7 @@ For each ticket:
 
 1. `tko get <KEY> --json` → its `dispatches`.
 2. For each dispatch still running (`orca orchestration worker-show --dispatch <id> --json`): `orca orchestration worker-stop --dispatch <id> --json`. A dispatch already finished needs nothing.
-3. `tko set <KEY> --status stopped --note "reassigned to <name or nobody>" --detail "assignment guard"`.
+3. `tko set <KEY> --status stopped --reason reassigned --note "reassigned to <name or nobody>" --detail "assignment guard"`.
 4. Tell my owner: "⏸️ <KEY> is now assigned to <name>. I stopped <n> agents. Workspace, branch and PR are untouched." Add the PR link if there is one.
 
-Do not delete workspaces or branches, do not close the PR, do not touch Jira. If the ticket comes back to my owner, the assignment check proposes it again.
+Do not delete workspaces or branches, do not close the PR, do not touch Jira. If the ticket comes back to my owner, the assignment check proposes it again (only reassignment stops come back), and `ticket-kickoff` reuses this workspace, branch and PR.

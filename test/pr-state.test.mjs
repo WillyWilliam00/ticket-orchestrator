@@ -24,10 +24,11 @@ const pr = (over = {}) => ({
 });
 
 test('checks summary', () => {
-  assert.deepEqual(summariseChecks([check('a', 'COMPLETED', 'SUCCESS'), check('b', 'IN_PROGRESS', null)]), { finished: false, failed: [] });
+  assert.deepEqual(summariseChecks([check('a', 'COMPLETED', 'SUCCESS'), check('b', 'IN_PROGRESS', null)]), { finished: false, failed: [], lastCompletedAt: null });
   assert.deepEqual(summariseChecks([check('a', 'COMPLETED', 'FAILURE'), { __typename: 'StatusContext', context: 'c', state: 'ERROR' }]), {
     finished: true,
     failed: ['a', 'c'],
+    lastCompletedAt: null,
   });
 });
 
@@ -41,14 +42,17 @@ test('draft: CI failed, then passed', () => {
   assert.equal(evaluatePr(pr(), { status: 'pr_draft' }, profile).reason, 'ci_passed');
 });
 
+const NOW = Date.parse('2026-01-01T12:00:00Z');
+const doneAt = (minutesAgo) => new Date(NOW - minutesAgo * 60_000).toISOString();
+
 test('ready: waits for every reviewer on the head commit', () => {
-  const ready = { isDraft: false };
-  const e1 = evaluatePr(pr(ready), { status: 'pr_draft' }, profile);
+  const ready = { isDraft: false, statusCheckRollup: [{ ...check('Build', 'COMPLETED', 'SUCCESS'), completedAt: doneAt(5) }] };
+  const e1 = evaluatePr(pr(ready), { status: 'pr_draft' }, profile, NOW);
   assert.equal(e1.status, 'pr_ready');
   assert.equal(e1.reason, null);
 
   const oldReview = { author: { login: 'review-bot' }, commit: { oid: 'b'.repeat(40) } };
-  assert.equal(evaluatePr(pr({ ...ready, reviews: [oldReview] }), { status: 'pr_ready' }, profile).reason, null);
+  assert.equal(evaluatePr(pr({ ...ready, reviews: [oldReview] }), { status: 'pr_ready' }, profile, NOW).reason, null);
 
   const both = {
     ...ready,
@@ -58,6 +62,27 @@ test('ready: waits for every reviewer on the head commit', () => {
   const e2 = evaluatePr(pr(both), { status: 'pr_ready' }, profile);
   assert.equal(e2.reason, 'reviews_ready');
   assert.deepEqual(e2.reviewers.reported, ['Reviewer bot', 'Checker']);
+});
+
+test('a reviewer that never reports stops blocking after the timeout', () => {
+  const ready = { isDraft: false, statusCheckRollup: [{ ...check('PR checker', 'COMPLETED', 'SUCCESS'), completedAt: doneAt(31) }] };
+  const e = evaluatePr(pr(ready), { status: 'pr_ready' }, profile, NOW);
+  assert.equal(e.reason, 'reviews_ready');
+  assert.deepEqual(e.reviewers.missing, ['Reviewer bot']);
+  const short = { ...profile, pr: { ...profile.pr, reviewerTimeoutMinutes: 60 } };
+  assert.equal(evaluatePr(pr(ready), { status: 'pr_ready' }, short, NOW).reason, null);
+});
+
+test('mergeable UNKNOWN then MERGEABLE wakes the bot again', () => {
+  const base = {
+    isDraft: false,
+    reviews: [{ author: { login: 'review-bot' }, commit: { oid: HEAD } }],
+    statusCheckRollup: [check('PR checker', 'COMPLETED', 'SUCCESS')],
+  };
+  const unknown = evaluatePr(pr({ ...base, mergeable: 'UNKNOWN' }), { status: 'pr_ready' }, profile);
+  const known = evaluatePr(pr({ ...base, mergeable: 'MERGEABLE' }), { status: 'pr_ready' }, profile);
+  assert.equal(unknown.reason, 'reviews_ready');
+  assert.notEqual(unknown.signature, known.signature);
 });
 
 test('signature changes when a blocking label goes away', () => {
