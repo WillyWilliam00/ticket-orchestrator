@@ -1,0 +1,50 @@
+{
+  "id": "acme",
+  "jira": {
+    "siteId": "",
+    "projectKey": "ACME",
+    "assignedJql": "",
+    "transitions": {
+      "start": "Start Work",
+      "complete": "Work Completed"
+    },
+    "startComment": "Taken in charge by Ticket Orchestrator. Branch: {branch}"
+  },
+  "mail": {
+    "from": "jira@acme.atlassian.net",
+    "subjectContains": "assigned ACME-"
+  },
+  "repo": {
+    "path": "/Users/you/code/acme-web",
+    "github": "acme/acme-web",
+    "baseBranch": "develop",
+    "ghUser": ""
+  },
+  "git": {
+    "branchFormat": "{type}/{key}-{slug}",
+    "commitFormat": "{type}/{key} | {summary}",
+    "types": ["feat", "fix", "refactor", "chore", "test", "docs"]
+  },
+  "setup": {
+    "copyFromMain": [".env", ".env.*.local"],
+    "commands": ["pnpm install"]
+  },
+  "pr": {
+    "draft": true,
+    "reviewers": [
+      { "name": "Review bot", "login": "acme-review-bot" },
+      { "name": "Checker", "login": "checker", "checkName": "Checker: PR review" }
+    ],
+    "blockingLabels": ["needs-audit"],
+    "blockingLabelHint": "Run the audit locally; it removes the label when it passes."
+  },
+  "agents": {
+    "default": "claude",
+    "model": "",
+    "effort": "high"
+  },
+  "workerRules": [
+    "Follow the repository's AGENTS.md / CLAUDE.md.",
+    "Run the project's typecheck, lint and tests before every push; fix what fails."
+  ]
+}

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket Orchestrator</title>
+<style>
+:root {
+  --bg: #f7f7f5; --surface: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --border: #e3e2dc;
+  --accent: #2f5bd3; --danger: #b42318; --danger-bg: #fdecea;
+  --s-baseline: #8a8a85; --s-proposed: #b7791f; --s-approved: #2f5bd3; --s-working: #6d4bd1;
+  --s-pr_draft: #0e7490; --s-pr_ready: #0f766e; --s-completed: #15803d; --s-rejected: #9f1239; --s-stopped: #9a3412;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121211; --surface: #1c1c1a; --text: #ecebe6; --muted: #a09f98; --border: #30302c;
+    --accent: #8aa8ff; --danger: #ff8a80; --danger-bg: #3a1714;
+    --s-baseline: #9a9a94; --s-proposed: #f0b44c; --s-approved: #8aa8ff; --s-working: #b49cff;
+    --s-pr_draft: #5ccfe6; --s-pr_ready: #4fd1c5; --s-completed: #6ee7a0; --s-rejected: #fb7185; --s-stopped: #fdba74;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 64px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+h1 { font-size: 22px; margin: 0; }
+.meta { color: var(--muted); font-size: 13px; }
+.counts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.chip { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+a { color: var(--accent); }
+.title { max-width: 380px; }
+.sub { color: var(--muted); font-size: 13px; }
+button { font: inherit; }
+.btn { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 13px; }
+.btn:hover { border-color: var(--muted); }
+.btn.danger { color: var(--danger); }
+.btn.danger:hover { background: var(--danger-bg); }
+.toggle { background: none; border: 0; color: var(--text); cursor: pointer; padding: 0; font-weight: 600; }
+.events td { background: var(--bg); }
+.events ol { margin: 0; padding-left: 18px; font-size: 13px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.empty { padding: 32px; text-align: center; color: var(--muted); }
+#msg { min-height: 20px; color: var(--muted); font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Ticket Orchestrator</h1>
+    <span class="meta" id="updated">Loading…</span>
+  </header>
+  <div class="counts" id="counts" role="group" aria-label="Filter by status"></div>
+  <div class="panel"><table>
+    <thead><tr><th>Ticket</th><th>Status</th><th>Branch / PR</th><th>Updated</th><th><span class="sub">Actions</span></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <div class="actions">
+    <button class="btn" id="clear-closed">Clear closed</button>
+    <button class="btn danger" id="clear-all">Clear everything</button>
+  </div>
+  <div id="msg" role="status" aria-live="polite"></div>
+</main>
+<script>
+const LABELS = { baseline: 'Baseline', proposed: 'Proposed', approved: 'Approved', working: 'Working', pr_draft: 'Draft PR',
+  pr_ready: 'PR ready', completed: 'Completed', rejected: 'Rejected', stopped: 'Stopped' };
+let data = { tickets: [], active: [] }, filter = null;
+const open = new Set();
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const when = (iso) => new Date(iso).toLocaleString();
+const status = (s) => `<span class="status" style="--c: var(--s-${s})"><span class="dot"></span>${LABELS[s] ?? esc(s)}</span>`;
+
+async function load() {
+  try {
+    const r = await fetch('/api/tickets');
+    data = await r.json();
+    $('updated').textContent = `Updated ${when(data.generatedAt)}`;
+    render();
+  } catch { $('updated').textContent = 'Cannot reach tko serve'; }
+}
+
+function render() {
+  const counts = {};
+  for (const t of data.tickets) counts[t.status] = (counts[t.status] ?? 0) + 1;
+  $('counts').innerHTML = [`<button class="chip" data-f="" aria-pressed="${!filter}">All ${data.tickets.length}</button>`]
+    .concat(Object.keys(LABELS).filter((s) => counts[s]).map((s) =>
+      `<button class="chip" data-f="${s}" aria-pressed="${filter === s}">${LABELS[s]} ${counts[s]}</button>`)).join('');
+  const rows = data.tickets.filter((t) => !filter || t.status === filter);
+  if (!rows.length) { $('rows').innerHTML = `<tr><td colspan="5" class="empty">No tickets</td></tr>`; return; }
+  $('rows').innerHTML = rows.map((t) => {
+    const key = t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.key)}</a>` : esc(t.key);
+    const pr = t.pr_url ? `<a href="${esc(t.pr_url)}" target="_blank" rel="noopener">#${t.pr_number}</a>` : '';
+    const ws = t.workspaces.length ? `<div class="sub">${t.workspaces.map(esc).join(', ')}</div>` : '';
+    const ev = open.has(t.key) ? `<tr class="events"><td colspan="5"><ol>${t.events.map((e) =>
+      `<li>${when(e.at)} — ${e.to_status ? `${esc(e.from_status ?? 'new')} → ${esc(e.to_status)}` : 'note'}${e.detail ? `: ${esc(e.detail)}` : ''}</li>`).join('')}</ol></td></tr>` : '';
+    return `<tr>
+      <td class="title"><button class="toggle" data-k="${esc(t.key)}" aria-expanded="${open.has(t.key)}">${open.has(t.key) ? '▾' : '▸'}</button> ${key}
+        <div>${esc(t.title_en || t.title)}</div>${t.title_en && t.title ? `<div class="sub">${esc(t.title)}</div>` : ''}</td>
+      <td>${status(t.status)}${t.note ? `<div class="sub">${esc(t.note)}</div>` : ''}</td>
+      <td>${t.branch ? `<code>${esc(t.branch)}</code>` : '<span class="sub">—</span>'} ${pr}${ws}</td>
+      <td class="sub">${when(t.updated_at)}</td>
+      <td><button class="btn danger" data-rm="${esc(t.key)}" aria-label="Remove ${esc(t.key)}">Remove</button></td>
+    </tr>${ev}`;
+  }).join('');
+}
+
+async function post(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', 'x-tko': '1' }, body: JSON.stringify(body) });
+  return { ok: r.ok, status: r.status, body: await r.json() };
+}
+
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.f !== undefined) { filter = b.dataset.f || null; render(); }
+  else if (b.dataset.k) { open.has(b.dataset.k) ? open.delete(b.dataset.k) : open.add(b.dataset.k); render(); }
+  else if (b.dataset.rm) {
+    const key = b.dataset.rm, t = data.tickets.find((x) => x.key === key);
+    const active = data.active.includes(t.status);
+    const warn = active ? `\n\n${key} is still ${LABELS[t.status]}. If it is still assigned to you, the bot will pick it up again as a new ticket.` : '';
+    if (!confirm(`Remove ${key} from the database?${warn}`)) return;
+    const r = await post('/api/remove', { key, force: active });
+    $('msg').textContent = r.ok ? `${key} removed.` : `Could not remove ${key}.`;
+    load();
+  } else if (b.id === 'clear-closed') {
+    if (!confirm('Remove every completed, rejected and stopped ticket?')) return;
+    const r = await post('/api/clear', { mode: 'closed' });
+    $('msg').textContent = `${r.body.removed ?? 0} closed tickets removed.`; load();
+  } else if (b.id === 'clear-all') {
+    if (!confirm('Remove EVERY ticket, including the ones in progress?')) return;
+    if (prompt('This cannot be undone. Type ALL to confirm.') !== 'ALL') return;
+    const r = await post('/api/clear', { mode: 'all', confirm: 'ALL' });
+    $('msg').textContent = `${r.body.removed ?? 0} tickets removed.`; load();
+  }
+});
+load();
+setInterval(load, 15000);
+</script>
+</body>
+</html>

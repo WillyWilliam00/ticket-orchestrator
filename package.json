@@ -1,0 +1,11 @@
+{
+  "name": "ticket-orchestrator",
+  "version": "0.1.0",
+  "description": "Orca bot kit: from an assigned ticket to a mergeable draft pull request, with approval at every step.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "bin": { "tko": "bin/tko.mjs" },
+  "engines": { "node": ">=22.13" },
+  "scripts": { "test": "node --test test/*.test.mjs" }
+}

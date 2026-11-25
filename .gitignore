@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+*.db
+*.db-*
+# Personal profiles belong in ~/.config/ticket-orchestrator/profiles, never here.
+profiles/*.json
+!profiles/example.json
