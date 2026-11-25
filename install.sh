@@ -49,20 +49,18 @@ say "✓ tko installed at $WRAPPER (node $("$NODE" -v))"
 if [ -d "$HOME/.orca/bots/$BOT" ]; then
   "$WRAPPER" bot-sync --bot "$BOT" >/dev/null && say "✓ soul and skills copied into the bot \"$BOT\""
 else
-  say "• bot \"$BOT\" not found yet (step 1 below)"
+  say "• bot \"$BOT\" not found yet (step 2 below)"
 fi
 
-PROFILES=$(find "$CONFIG/profiles" -name '*.json' | wc -l | tr -d ' ')
 cat <<EOF
 
-Next steps
-  1. In Orca, create a bot named "$BOT" (model: the one you want it to think with).
-     Then run this installer again so it gets its soul and skills.
-  2. In the bot's chat, connect Google (needed for the assignment emails).
-  3. Write a profile: cp "$KIT/profiles/example.json" "$CONFIG/profiles/<id>.json" and edit it.
-     Profiles found now: $PROFILES
-  4. tko seed            # records the tickets already assigned to you, so they are not proposed
-  5. tko automations     # creates the automations, all disabled
-  6. In Orca's repository settings, set the setup script of each project to:  $WRAPPER setup-worktree
-  7. Try one ticket end to end, then enable the automations in Orca.
+Next steps (details in README.md, "Setup, step by step"):
+  2. In Orca, create a bot named exactly "$BOT", then run:  tko doctor --fix
+  3. In the bot's chat, connect Google
+  4. Copy profiles/example.json to $CONFIG/profiles/<project>.json and edit it
+  5. tko seed           records the tickets you already have, so they are not proposed
+  6. tko automations    creates the four automations, disabled
+  7. Try one ticket ("take KEY" in the bot's chat), then enable the automations in Orca
+
+At any point, tko doctor tells you what is missing.
 EOF

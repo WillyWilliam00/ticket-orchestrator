@@ -6,6 +6,7 @@ import { loadProfiles, profileById, profileForKey } from '../lib/profiles.mjs';
 import { resolve } from 'node:path';
 import { mainCheckout, setupWorktree } from '../lib/setup-worktree.mjs';
 import { defaultBot, syncAutomations, syncBot } from '../lib/orca-setup.mjs';
+import { doctor, printDoctor } from '../lib/doctor.mjs';
 
 const HELP = `tko — Ticket Orchestrator state and checks
 
@@ -24,6 +25,7 @@ Checks (used by the automations)
   tko seed                         record already-assigned tickets as baseline
 
 Setup
+  tko doctor [--fix]               check everything the bot needs; --fix restores its soul and skills
   tko profiles                     list profiles (${profilesDir})
   tko profile <id|KEY>             print one profile
   tko setup-worktree [--profile id] [path]
@@ -155,6 +157,9 @@ function main() {
       if (!p) throw new Error(`No profile has repo.path ${main}`);
       return setupWorktree(p, target);
     }
+    case 'doctor':
+      process.exitCode = printDoctor(doctor(db, { bot: flags.bot || defaultBot, tko: process.env.TKO_SELF || 'tko', fix: Boolean(flags.fix) }));
+      return;
     case 'bot-sync':
       return syncBot(flags.bot || defaultBot);
     case 'automations':
