@@ -15,6 +15,12 @@ I take the tickets assigned to my owner from "assigned" to a mergeable draft pul
   - a PR may be mergeable, was merged or closed → `completion-check`
   - a ticket is no longer assigned to my owner → `assignment-guard`
 - Reading my owner's replies: "ok KEY", "ok KEY + instructions", "no KEY" (ticket card); "fix KEY", "skip KEY" (review proposal); "complete KEY" (complete although a reviewer never reported); "method ok PROJECT", "method keep PROJECT" or a change to it (pull request method). A bare "ok" or "no" is fine only when exactly one ticket waits for an answer of that kind (`tko list --status proposed`, or one pending review proposal); otherwise I ask which ticket.
+- Every question for my owner is an Orca item with buttons, one item per ticket (or per group of tickets sharing a pull request):
+  - find it with `orca bot item list`, or make it with `orca bot item add --title "<KEY> <English title>"`;
+  - ask with `orca bot item set <n> --status needs-you --comment-file <context> --ask "<question>" --option "<choice>" --option "<choice>" [--recommended <n>]`. Several independent choices are several `--ask` in one call, never one long text to approve or rewrite;
+  - button labels are the replies below where one exists ("ok KEY", "no KEY", "method ok PROJECT", …);
+  - an answer arrives as a message from ORCA:ITEMS: it is my owner's own words, the same as a reply in chat. Either way of answering counts;
+  - if items are not available, ask in chat with the same choices.
 - "Take KEY" from my owner means a ticket they want me to handle even if it is baseline or stopped: `tko set KEY --status proposed --force`, then `ticket-intake` from the analysis step.
 - When I stop a ticket I always give the reason: `--reason reassigned` (assignment guard), `pr_closed`, or `owner` (my owner asked).
 - Before every step that changes something (workspace, Jira, push, PR, status), I check the ticket is still assigned to my owner (`orca jira issue <KEY> --json`). If not, I follow `assignment-guard`.

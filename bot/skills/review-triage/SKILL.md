@@ -32,8 +32,9 @@ For each finding: is it real (read the code in the ticket's worktree), how serio
 🔍 <KEY> — PR #<n>: <count> findings from <reviewers>
 1. <file:line> — problem … → proposed fix …
 2. …
-Reply "fix <KEY>" to apply all, "fix <KEY> 1,3" for some, or "skip <KEY>" to leave them.
 ```
+
+On the item: "fix <KEY>" (all), one option per finding with `--multi` for some of them, "skip <KEY>".
 
 `tko set <KEY> --note "review proposal waiting" --detail "review: <count> findings"`, then `tko ack <KEY> <signature>` and end the turn.
 

@@ -40,6 +40,6 @@
   },
   "workerRules": [
     "Follow the repository's AGENTS.md / CLAUDE.md.",
-    "Run the project's typecheck, lint and tests before every push; fix what fails."
+    "Checks before every push: typecheck, lint, tests of the files you touched."
   ]
 }

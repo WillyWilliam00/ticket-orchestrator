@@ -140,14 +140,14 @@ tko automations
 ### 6. Try one ticket, then switch on
 
 1. In the bot's chat: **"take ACME-123"** (a real, small ticket assigned to you).
-2. You get the card. Answer **"ok ACME-123"**.
+2. You get the card. Press (or write) **"ok ACME-123"**.
 3. Follow it: workspace created, ticket *In progress*, agent working, draft PR, CI.
 4. Mark the PR ready for review yourself. To test the PR check before turning automations on, use **Run now** on `TKO · pull request check` in Orca.
 5. When it all looks right, **enable the three automations** in Orca.
 
 ## Using it
 
-**Answering the bot** (in its chat):
+**Answering the bot:** every question is an Orca item with buttons; you can also write the same words in its chat.
 
 | You write | When | Effect |
 | --- | --- | --- |

@@ -42,7 +42,7 @@ Always a draft. …
 ```
 
 4. No rule found → propose the plain method: push, `gh pr create --draft`, nothing posted, no blocking labels. Say that nothing was found.
-5. Post a short summary in my chat, naming the files it comes from and everything the method does beyond opening a draft (posts comments, sets labels, needs an app open, takes long). Ask: "method ok <profile>", or tell me what to change. End the turn.
+5. Post a short summary in my chat, naming the files it comes from and everything the method does beyond opening a draft (posts comments, sets labels, needs an app open, takes long). Ask on the item: "method ok <profile>" or "I want to change it", **plus one `--ask` per choice the project leaves open** (for example who runs an audit and when, whether a report is posted on the pull request, which labels block completion), with the repository's own rule as the recommended option. My owner should never need a second round to change one point. Say what each choice leads to, in particular when one lets a ticket complete without a check. End the turn.
 
 One proposal at a time per project: if one is already waiting, do not post it again.
 

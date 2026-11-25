@@ -24,7 +24,7 @@ All must hold:
 2. every check finished and passed (skipped and neutral are fine);
 3. `mergeable` is `MERGEABLE`. `CONFLICTING` blocks. `UNKNOWN` means GitHub has not computed it yet: do not complete and do not message my owner; the pull-request check wakes me again as soon as it changes.
 4. none of the labels under "Labels that block completion" in `tko pr-method show <KEY>`;
-5. every reviewer in `pr.reviewers` reported on the head commit, with no open findings (from `review-triage`, or skipped by my owner). A reviewer that did not report within the timeout (`reviewersMissing`) does not count as approval: tell my owner which reviewer is missing and complete only if they reply "complete <KEY>".
+5. every reviewer in `pr.reviewers` reported on the head commit, with no open findings (from `review-triage`, or skipped by my owner). A reviewer that did not report within the timeout (`reviewersMissing`) does not count as approval: ask on the item, naming the missing reviewer ("complete <KEY>" / "wait"), and complete only on "complete <KEY>".
 
 **All true** →
 - still assigned to my owner? (`orca jira issue <KEY> --json`) If not → `assignment-guard`;
