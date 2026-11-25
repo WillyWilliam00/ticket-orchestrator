@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { claim, clearTickets, getEvents, getTicket, listTickets, openDb, reclaim, removeTicket, setTicket, ACTIVE } from '../lib/db.mjs';
+import { ackPr, claim, clearTickets, getEvents, getTicket, listTickets, openDb, reclaim, removeTicket, setTicket, ACTIVE } from '../lib/db.mjs';
 import { home, profilesDir } from '../lib/paths.mjs';
 import { pendingAssignments, pendingGuard, pendingPrs, seed } from '../lib/pending.mjs';
 import { loadProfiles, profileById, profileForKey } from '../lib/profiles.mjs';
@@ -17,7 +17,7 @@ Tickets
   tko get <KEY> [--json]
   tko claim <KEY> --source poll|manual [--title t] [--url u]   exit 0 = taken, 1 = already tracked
   tko set <KEY> [--status s] [--title-en t] [--branch b] [--pr n] [--workspace w] [--dispatch id] [--reason reassigned|pr_closed|owner] [--note n] [--detail d] [--force]
-  tko ack <KEY> <signature>        mark a pull request event as handled
+  tko ack <KEY> <signature>        mark a pull request event as handled (for every ticket sharing the PR)
   tko remove <KEY> [--force]       --force is needed for an active ticket
   tko clear --closed | --all --yes
 
@@ -123,8 +123,7 @@ function main() {
     }
     case 'ack': {
       if (!pos[1]) throw new Error('usage: tko ack <KEY> <signature>');
-      setTicket(db, pos[0], { prAck: pos[1] }, { detail: `handled PR event ${pos[1]}` });
-      return console.log(`acknowledged ${pos[0]}`);
+      return console.log(`acknowledged ${ackPr(db, pos[0], pos[1]).join(', ')}`);
     }
     case 'remove': {
       const t = getTicket(db, pos[0]);
@@ -145,7 +144,7 @@ function main() {
       if (!fn) throw new Error('usage: tko pending|precheck assignments|prs|guard');
       const items = fn(db, profiles());
       if (cmd === 'precheck') {
-        console.log(items.length ? `${items.length} to handle: ${items.map((i) => i.key).join(', ')}` : 'nothing to do');
+        console.log(items.length ? `${items.length} to handle: ${items.map((i) => (i.keys ?? [i.key]).join('+')).join(', ')}` : 'nothing to do');
         process.exitCode = items.length ? 0 : 1;
         return;
       }

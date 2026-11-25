@@ -5,6 +5,8 @@ description: CI failed on a ticket's pull request (reason ci_failed from tko pen
 
 # CI fix
 
+One pull request, one fix, however many tickets it covers (`keys`).
+
 Input: an entry from `tko pending prs --json` with `reason: ci_failed`, its `failedChecks` and `signature`.
 
 1. Still assigned to my owner? (`orca jira issue <KEY> --json`) If not → `assignment-guard`.

@@ -185,6 +185,10 @@ A new Orca workspace is a clean checkout: no `.env` or other ignored files, no `
 
 It copies the files listed in the profile's `setup.copyFromMain` from the main checkout (never overwriting) and runs `setup.commands` (e.g. `pnpm install`).
 
+### Several tickets in one pull request
+
+When two tickets are really one change, tell the bot ("ok ACME-1 and ACME-2 together"). They share one branch, one workspace and one pull request; CI and reviews are handled once, and each ticket moves in Jira on its own.
+
 ### Several projects
 
 Add one profile per project. The bot picks the profile from the ticket key's project (`ACME-123` → the profile with `jira.projectKey: "ACME"`). The automations are shared: the assignments check runs at the shortest `pollMinutes` among your profiles.

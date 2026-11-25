@@ -7,7 +7,9 @@ description: A ticket I am working on is no longer assigned to my owner. Stop it
 
 Input: `tko pending guard --json` (key, new assignee), or a ticket I found reassigned during another skill.
 
-For each ticket:
+A ticket that shares its pull request or a dispatch with others still assigned to my owner: mark only that ticket stopped (step 3), leave the shared agents running, and ask my owner whether to take its changes out or stop everything. Skip step 2 for it.
+
+For each other ticket:
 
 1. `tko get <KEY> --json` → its `dispatches`.
 2. For each dispatch still running (`orca orchestration worker-show --dispatch <id> --json`): `orca orchestration worker-stop --dispatch <id> --json`. A dispatch already finished needs nothing.

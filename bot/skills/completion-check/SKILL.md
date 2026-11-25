@@ -5,6 +5,8 @@ description: Decide whether a ticket's pull request is mergeable by the profile'
 
 # Completion check
 
+The pull request is judged once. When it covers several tickets (`keys`), do the assignment check, the Jira transition and `tko set` for each, and tell my owner in one message which ones moved and which did not. A ticket no longer assigned to my owner follows `assignment-guard` and does not hold back the others.
+
 ## Merged or closed (reason pr_merged / pr_closed)
 
 - **merged**: if the ticket is not `completed`, run the Jira complete transition (below) and `tko set <KEY> --status completed --force --detail "PR merged"`. Tell my owner.

@@ -14,6 +14,8 @@ description: My owner answered a ticket card ("ok KEY", "ok KEY + changes", "no 
 
 **"ok"** → record what they added: `tko set <KEY> --status approved --detail "<plan and instructions from the reply>"`. Their changes override the plan in `briefs/<KEY>.md`; append them to that file under `## Owner instructions`.
 
+**Several tickets together** (only when my owner says so): one branch, one workspace, one pull request. Record the answer, the workspace, the dispatches and the pull request on every ticket; start one worker for all of them. Use the first key for file names, and attach every ticket to the workspace with its own `--reference <KEY>`.
+
 ## 2. Check before acting
 
 `orca jira issue <KEY> --json`: still assigned to my owner? If not → `assignment-guard`.
@@ -27,9 +29,10 @@ Profile: `tko profile <KEY>`.
 ```
 orca worktree create --repo path:<repo.path> --name <KEY> --branch <branch> \
   --base-branch origin/<repo.baseBranch> --reference <KEY> [--reference-site <jira.siteId>] \
-  --setup skip --comment "<English title>" --json
+  --no-parent --setup skip --comment "<English title>" --json
 ```
 
+- `--no-parent` puts the workspace under its own project in Orca instead of under my home.
 - Keep the worktree id and path from the result.
 - Setup: run `tko setup-worktree <path>`. If it fails, report the error and stop (status stays `approved`).
 - `tko set <KEY> --status working --workspace <worktree id> --detail "workspace created"`.
@@ -59,7 +62,7 @@ Record each dispatch: `tko set <KEY> --dispatch <dispatch id>`. Tell my owner in
 
 ## When a worker reports
 
-- **Single worker, PR opened** (`worker_done` with the PR number): check it with `gh pr view <n> -R <repo.github> --json number,isDraft,url,baseRefName,headRefName` — it must be a draft, on the ticket branch, against the base branch. Then `tko set <KEY> --status pr_draft --pr <n> --detail "draft PR opened"` and tell my owner: PR link, what changed, tests run, anything left open. From here the pull-request check follows CI.
+- **Single worker, PR opened** (`worker_done` with the PR number): check it with `gh pr view <n> -R <repo.github> --json number,isDraft,url,baseRefName,headRefName` — it must be a draft, on the ticket branch, against the base branch. Then `tko set <KEY> --status pr_draft --pr <n> --detail "draft PR opened"` (for every ticket the PR covers) and tell my owner: PR link, what changed, tests run, anything left open. From here the pull-request check follows CI.
 - **Part workers**: when every part has reported, start one integration worker in the main worktree to merge the part branches into the ticket branch, run the checks, push and open the draft PR (same spec template, task "integrate parts"). Then as above.
 - **Waiting for the pull request method** (a worker asks because `tko pr-method check` did not pass): follow `pr-method`; answer the worker once my owner has decided.
 - **A choice the method leaves to the owner** (e.g. an audit found problems: fix first or open anyway): ask my owner, then pass on the answer.
