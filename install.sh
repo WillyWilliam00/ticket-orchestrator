@@ -56,11 +56,10 @@ cat <<EOF
 
 Next steps (details in README.md, "Setup, step by step"):
   2. In Orca, create a bot named exactly "$BOT", then run:  tko doctor --fix
-  3. In the bot's chat, connect Google
-  4. Copy profiles/example.json to $CONFIG/profiles/<project>.json and edit it
-  5. tko seed           records the tickets you already have, so they are not proposed
-  6. tko automations    creates the four automations, disabled
-  7. Try one ticket ("take KEY" in the bot's chat), then enable the automations in Orca
+  3. Copy profiles/example.json to $CONFIG/profiles/<project>.json and edit it
+  4. tko seed           records the tickets you already have, so they are not proposed
+  5. tko automations    creates the three automations, disabled
+  6. Try one ticket ("take KEY" in the bot's chat), then enable the automations in Orca
 
 At any point, tko doctor tells you what is missing.
 EOF

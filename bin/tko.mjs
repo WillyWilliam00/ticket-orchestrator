@@ -13,7 +13,7 @@ const HELP = `tko — Ticket Orchestrator state and checks
 Tickets
   tko list [--status s1,s2] [--profile id] [--json]
   tko get <KEY> [--json]
-  tko claim <KEY> --source mail|poll|manual [--title t] [--url u]   exit 0 = taken, 1 = already tracked
+  tko claim <KEY> --source poll|manual [--title t] [--url u]   exit 0 = taken, 1 = already tracked
   tko set <KEY> [--status s] [--title-en t] [--branch b] [--pr n] [--workspace w] [--dispatch id] [--reason reassigned|pr_closed|owner] [--note n] [--detail d] [--force]
   tko ack <KEY> <signature>        mark a pull request event as handled
   tko remove <KEY> [--force]       --force is needed for an active ticket
@@ -83,7 +83,7 @@ function main() {
     }
     case 'claim': {
       const key = pos[0];
-      if (!key || !flags.source) throw new Error('usage: tko claim <KEY> --source mail|poll|manual');
+      if (!key || !flags.source) throw new Error('usage: tko claim <KEY> --source poll|manual');
       const p = profileForKey(profiles(), key);
       const took = claim(db, { key, profile: p.id, title: flags.title || '', url: flags.url || null, source: flags.source }) || reclaim(db, key, flags.source);
       console.log(took ? `taken ${key}` : `already tracked ${key} (${getTicket(db, key).status})`);

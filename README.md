@@ -16,7 +16,7 @@ Works with Jira, GitHub and Orca. Not affiliated with Atlassian, GitHub or Orca.
 
 ## What it does
 
-1. **Notices new tickets** assigned to you: from the Jira assignment email (within about a minute) and from a Jira check every 5 minutes, which also catches tickets you assign to yourself.
+1. **Notices new tickets** assigned to you, with a Jira check every few minutes (5 by default, configurable). It also catches tickets you assign to yourself.
 2. **Analyses** each ticket against your code and posts a card in the bot's Orca chat: summary, acceptance criteria, likely files, technical analysis, open points, English title, proposed branch, and a plan (how many coding agents, which model).
 3. **Waits for your "ok"**. Then it creates the workspace (branch linked to the ticket), copies your local env files into it, moves the ticket to *In progress* with one comment, and starts the coding agents.
 4. The agents follow your repository's rules, commit as `{type}/{KEY} | summary`, push, and open a **draft** PR.
@@ -36,20 +36,19 @@ It never merges, approves, marks a PR ready, force-pushes, or posts anywhere exc
 | State | `~/.config/ticket-orchestrator/state.db` | SQLite. Every ticket the bot handles, its status and its history. |
 | Automations | Orca | What wakes the bot without you writing to it. See below. |
 
-### The four automations
+### The three automations
 
-On its own, an Orca bot only acts when you write to it. Automations are what wake it up:
+On its own, an Orca bot only acts when you write to it. An automation is an Orca timer that starts it for you. It is not a skill: the **automation** decides *when* the bot starts, the **skill** tells it *how* to do the job.
 
 | Automation | When it runs | What the bot then does |
 | --- | --- | --- |
-| `TKO · <profile> · assignment mail` | A Jira email says a ticket was assigned to you | Analyses the ticket and posts the card |
-| `TKO · new assignments check` | Every 5 min, **only if** a ticket assigned to you is not tracked yet | Same, and catches tickets you assigned to yourself (Jira does not email you about your own changes) |
+| `TKO · new assignments check` | Every `pollMinutes` (default 5), **only if** a ticket assigned to you is not tracked yet | Analyses the ticket and posts the card |
 | `TKO · pull request check` | Every 5 min, **only if** a tracked PR changed (CI finished, marked ready, reviewers reported, labels, merged) | Fixes CI, triages reviews, completes the ticket |
 | `TKO · assignment guard` | Every 30 min, **only if** a ticket in progress is no longer assigned to you | Stops its agents and tells you |
 
 "Only if" is an Orca *precheck*: before starting the bot, Orca runs a `tko precheck …` command, which takes about a second. When there is nothing to do, the bot is not started and the run costs nothing.
 
-`tko automations` creates all four with the exact settings (filters from your profile, absolute paths, prechecks). They are created **disabled**: you try one ticket first, then turn them on.
+`tko automations` creates all three with the exact settings (schedule, absolute paths, prechecks). They are created **disabled**: you try one ticket first, then turn them on.
 
 ## Requirements
 
@@ -86,14 +85,7 @@ tko doctor --fix
 - **Why `--fix`:** it copies the character and skills into the bot. Orca writes its own `SOUL.md` when a bot is created or first used, so run `tko doctor` again after your first chat with the bot; it tells you if they need restoring.
 - **Check:** `tko doctor` shows `✓ Bot soul, skills and worker template match the kit`.
 
-### 3. Connect Google
-
-In the bot's chat, ask it to connect Google and press **Connect** on the card it shows.
-
-- **Why:** the assignment email trigger reads your Gmail. Without it, only the 5-minute check finds new tickets, which works but is slower.
-- **Check:** `tko doctor` shows `✓ Google connected`.
-
-### 4. Write your project profile
+### 3. Write your project profile
 
 ```sh
 cp profiles/example.json ~/.config/ticket-orchestrator/profiles/<project>.json
@@ -105,12 +97,11 @@ Edit it ([field reference](#profile-reference)). The values you most likely need
 | --- | --- |
 | `jira.siteId` | `orca jira connection --json` → `sites[].id` |
 | `jira.transitions` | `orca jira status list <A-TICKET-KEY> --json` → the names that move a ticket to "in progress" and to "done/completed" |
-| `mail.from`, `mail.subjectContains` | Open a Jira assignment email: the sender, and a piece of the subject that is always there (e.g. `assigned ACME-`, or in Italian `ti ha assegnato ACME-`) |
 | `pr.reviewers` | On a recent PR: `gh pr view <n> --json reviews,statusCheckRollup` → the review authors' logins and the check names of your review bots |
 
 - **Check:** `tko doctor` shows `✓ Profile "<id>": Jira … and GitHub … reachable`.
 
-### 5. Record the tickets you already have
+### 4. Record the tickets you already have
 
 ```sh
 tko seed
@@ -119,22 +110,22 @@ tko seed
 - **Why:** without it, the first check would find every open ticket assigned to you and propose them all. `seed` records them as `baseline`, so the bot only acts on new ones. To hand one of them to the bot later, write to it: "take ACME-123".
 - **Check:** `tko list` shows them as `baseline`.
 
-### 6. Create the automations
+### 5. Create the automations
 
 ```sh
 tko automations
 ```
 
-- **Why:** see [The four automations](#the-four-automations). They are created disabled.
+- **Why:** see [The three automations](#the-three-automations). They are created disabled.
 - **Check:** `tko doctor` shows `✓ All automations exist`. In Orca they appear in the bot's automations.
 
-### 7. Try one ticket, then switch on
+### 6. Try one ticket, then switch on
 
 1. In the bot's chat: **"take ACME-123"** (a real, small ticket assigned to you).
 2. You get the card. Answer **"ok ACME-123"**.
 3. Follow it: workspace created, ticket *In progress*, agent working, draft PR, CI.
 4. Mark the PR ready for review yourself. To test the PR check before turning automations on, use **Run now** on `TKO · pull request check` in Orca.
-5. When it all looks right, **enable the four automations** in Orca.
+5. When it all looks right, **enable the three automations** in Orca.
 
 ## Using it
 
@@ -177,14 +168,14 @@ It copies the files listed in the profile's `setup.copyFromMain` from the main c
 
 ### Several projects
 
-Add one profile per project. The bot picks the profile from the ticket key's project (`ACME-123` → the profile with `jira.projectKey: "ACME"`). Each profile with a mail filter gets its own mail automation; run `tko automations` again after adding one.
+Add one profile per project. The bot picks the profile from the ticket key's project (`ACME-123` → the profile with `jira.projectKey: "ACME"`). The automations are shared: the assignments check runs at the shortest `pollMinutes` among your profiles.
 
 ## Pause, update, uninstall
 
 - **Pause:** disable the automations in Orca. The bot then only acts when you write to it.
-- **Update:** `git pull && ./install.sh && tko doctor --fix`. Profiles and the database are never touched. If you changed a profile's mail filter, `tko automations --replace` recreates the automations from it.
+- **Update:** `git pull && ./install.sh && tko doctor --fix`. Profiles and the database are never touched. If you changed `pollMinutes`, `tko automations --replace` recreates the automations (disabled: enable them again in Orca).
 - **Uninstall:**
-  1. In Orca, delete the four `TKO ·` automations and the bot.
+  1. In Orca, delete the three `TKO ·` automations and the bot.
   2. `rm ~/.local/bin/tko`
   3. `rm -r ~/.config/ticket-orchestrator` (your profiles and the ticket history)
   4. Delete the cloned folder.
@@ -197,7 +188,6 @@ Add one profile per project. The bot picks the profile from the ticket key's pro
 - **A check never wakes the bot:** in Orca, the automation's run history shows `skipped_precheck` when there was nothing to do. Run the same check yourself, e.g. `tko pending prs`, to see what it sees.
 - **Errors from Jira or GitHub** during the checks are written to `~/.config/ticket-orchestrator/errors.log`. One failing ticket or PR does not stop the others.
 - **A reviewer never reports:** after `pr.reviewerTimeoutMinutes` (default 30) from the end of CI, the bot tells you which reviewer is missing; answer `complete KEY` to go on.
-- **The mail automation never fires:** check the sender and subject of a real assignment email against `mail.from` / `mail.subjectContains`, fix the profile, then `tko automations --replace`.
 
 ## Profile reference
 
@@ -206,11 +196,11 @@ See [`profiles/example.json`](profiles/example.json).
 | Field | Meaning |
 | --- | --- |
 | `id` | Profile name |
+| `pollMinutes` | Optional, default 5: how often to look for new tickets (1, 2, 3, 4, 5, 6, 10, 12, 15, 20 or 30) |
 | `jira.projectKey`, `jira.siteId` | Project and Orca Jira site |
 | `jira.assignedJql` | Optional; default: open tickets assigned to you in the project |
 | `jira.transitions.start` / `.complete` | Transition names for "in progress" and "work completed" |
 | `jira.startComment` | The one comment posted on start (`{branch}` is filled in) |
-| `mail.from`, `mail.subjectContains` | Gmail filter for assignment emails |
 | `repo.path`, `repo.github`, `repo.baseBranch` | Main checkout, GitHub repository, PR base branch |
 | `repo.ghUser` | Optional: the `gh` account to use for this project (the active account is never switched) |
 | `git.branchFormat`, `git.commitFormat`, `git.types` | Naming rules (`{type}`, `{key}`, `{slug}`, `{summary}`) |

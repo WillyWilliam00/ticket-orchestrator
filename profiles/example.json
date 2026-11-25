@@ -1,5 +1,6 @@
 {
   "id": "acme",
+  "pollMinutes": 5,
   "jira": {
     "siteId": "",
     "projectKey": "ACME",
@@ -9,10 +10,6 @@
       "complete": "Work Completed"
     },
     "startComment": "Taken in charge by Ticket Orchestrator. Branch: {branch}"
-  },
-  "mail": {
-    "from": "jira@acme.atlassian.net",
-    "subjectContains": "assigned ACME-"
   },
   "repo": {
     "path": "/Users/you/code/acme-web",
